@@ -1,0 +1,53 @@
+cff-version: 1.2.0
+message: "If you use this framework or reference implementation, please cite the associated paper."
+
+title: "AI-Stabilized Spacetime Dynamics: A Minimal Control-Theoretic Framework for the Triadic Phase Operator ΔΦ"
+
+authors:
+  - family-names: "Krüger"
+    given-names: "Marcel"
+    affiliation: "Independent Researcher, Meiningen, Germany"
+    orcid: "https://orcid.org/0009-0002-5709-9729"
+    email: "marcelkrueger092@gmail.com"
+
+  - family-names: "Feeney"
+    given-names: "Don"
+    affiliation: "Independent Researcher, Pennsylvania, USA"
+    orcid: "https://orcid.org/0009-0003-1350-4160"
+    email: "dfeen87@gmail.com"
+
+date-released: "2026-01-17"
+version: "0.1.0"
+license: "MIT"
+
+repository-code: "https://github.com/dfeen87/AI-Stabilized-Spacetime-Dynamics"
+
+abstract: >
+  This repository provides a reference implementation and accompanying
+  theoretical framework for the triadic phase operator ΔΦ, a deterministic,
+  control-theoretic diagnostic method for stability monitoring, regime
+  detection, and reproducible analysis in nonstationary and path-dependent
+  systems. The framework is explicitly non-interventional and observer-style,
+  separating diagnosis from control, prediction, and optimization.
+
+keywords:
+  - control theory
+  - stability analysis
+  - diagnostic observers
+  - regime detection
+  - Lyapunov methods
+  - reproducible research
+  - AI-assisted diagnostics
+
+preferred-citation:
+  type: article
+  title: "A Minimal Control-Theoretic Framework for the Triadic Phase Operator ΔΦ"
+  authors:
+    - family-names: "Krüger"
+      given-names: "Marcel"
+      orcid: "https://orcid.org/0009-0002-5709-9729"
+    - family-names: "Feeney"
+      given-names: "Don"
+      orcid: "https://orcid.org/0009-0003-1350-4160"
+  year: 2026
+  month: 1
