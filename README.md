@@ -44,53 +44,39 @@ acts as an **indicator of instability and regime transition**. The formulation i
 ```
 AI-Stabilized-Spacetime-Dynamics/
 │
-├── README.md                         # Project overview, scope, links
+├── README.md                         # Project overview, scope, and usage
 ├── LICENSE                           # MIT license
 ├── CITATION.cff                     # Citation metadata
 │
-├── paper/                            # Canonical research manuscript
-│   ├── delta_phi_framework.md        # Full Markdown paper (authoritative)
-│   ├── delta_phi_framework.pdf       # PDF export (optional / later)
-│   ├── delta_phi_framework.tex       # LaTeX source (optional / later)
-│   ├── references.bib                # Bibliography
-│   └── README.md                     # Explains paper ↔ repo relationship
+├── paper/
+│   └── delta_phi_framework.md        # Canonical research manuscript (Markdown)
 │
-├── framework/                        # Core ΔΦ definitions (diagnostic only)
+├── framework/
 │   ├── delta_phi.py                  # ΔΦ operator implementation
-│   ├── stability.py                  # Stability score J(t), flags
+│   ├── stability.py                  # Stability score J(t) and regime logic
 │   └── __init__.py                   # Framework exports
 │
-├── features/                         # Feature construction layer
-│   ├── feature_maps.py               # φ_S: instantaneous features
+├── features/
+│   ├── feature_maps.py               # φ_S: instantaneous state features
 │   ├── memory_models.py              # φ_I: memory / history models
-│   ├── constraint_models.py          # φ_C: constraint estimators
-│   └── __init__.py                   # Feature registry
+│   ├── constraint_models.py          # φ_C: admissible regime boundaries
+│   └── __init__.py                   # Feature registries
 │
-├── pipeline/                         # Diagnostic observer pipeline
-│   ├── observer.py                   # y(t) → ΔΦ → J(t)
-│   ├── config.py                     # Parameters + locking
-│   ├── replay.py                     # Deterministic replay tools
+├── pipeline/
+│   ├── observer.py                   # Diagnostic observer (y → ΔΦ → J)
+│   ├── config.py                     # Explicit configuration and locking
+│   ├── replay.py                     # Deterministic replay & audit tools
 │   └── __init__.py                   # Pipeline entry points
 │
-├── docs/                             # Supporting documentation
-│   ├── framework_overview.md         # Plain-language overview
-│   ├── reproducibility.md            # Determinism & auditability
-│   └── limitations.md                # Explicit scope limits
-│
-├── figures/                          # Diagrams for paper/docs
-│   ├── delta_phi_pipeline.png        # Diagnostic pipeline diagram
-│   ├── observer_control_separation.png # No-feedback separation
-│   └── triadic_feature_geometry.png  # φ_S / φ_I / φ_C geometry
-│
-├── examples/                         # Illustrative examples only
-│   ├── synthetic_signal.ipynb        # Toy/synthetic demonstration
-│   └── README.md                     # States non-claim nature
-│
-└── tests/                            # Verification & consistency
-    ├── test_delta_phi.py             # ΔΦ unit tests
-    ├── test_stability_score.py       # J(t) behavior tests
-    └── test_reproducibility.py       # Replay determinism tests
+└── tests/
+    ├── test_delta_phi.py              # ΔΦ operator unit tests
+    ├── test_stability_score.py        # Stability score behavior tests
+    └── test_reproducibility.py        # Deterministic replay verification
+
 ```
+
+> Additional documentation, figures, or illustrative examples may be released in future versions, but are intentionally excluded from the present reference implementation.
+
 ---
 
 ## What This Framework Is (and Is Not)
