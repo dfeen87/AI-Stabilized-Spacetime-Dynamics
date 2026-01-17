@@ -409,7 +409,9 @@ All conclusions drawn from the framework remain **contingent on the explicit cho
 
 ## References
 
-**[1]** M. Krüger. *A Mathematical Unification of the Helix–Light–Vortex (HLV) Framework: Discrete Geometry, Spiral Time, Unified Lagrangians, and an Effective Field Theory Approach.* 2026. (See triadic operator discussion and operator-domain remarks.)
+**[1]** M. Krüger. “A Mathematical Unification of the Helix–Light–Vortex (HLV) Framework: Dis-
+crete Geometry, Spiral Time, Unified Lagrangians, and an Effective Field Theory Approach
+to Geometric Unification,” Zenodo (2026). doi:10.5281/zenodo.18261685.
 
 ---
 
