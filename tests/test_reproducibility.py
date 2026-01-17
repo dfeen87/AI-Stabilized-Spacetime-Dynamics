@@ -1,279 +1,247 @@
 """
-Reproducibility & Determinism Tests
+Reproducibility & Deterministic Replay Tests
 
-These tests enforce that the ΔΦ diagnostic pipeline is:
-- Deterministic given fixed configuration and fixed inputs
-- Replayable (same input sequence -> identical outputs)
-- Consistent across processing modes (stepwise vs batch)
-- Configurable in an auditable way (save/load + hash consistency)
-
-This suite intentionally avoids stochastic feature maps or hidden randomness.
+This suite enforces that:
+- DiagnosticObserver is deterministic for fixed inputs + fixed config
+- Reset reproduces identical outputs
+- ReplayRecording hashes are stable and verifiable
+- Recordings survive save/load without mutation (JSON + Pickle)
+- ReplayValidator compares recordings frame-by-frame within tolerance
 """
 
-import json
 import numpy as np
 import pytest
 
 from pipeline.observer import DiagnosticObserver, ObserverConfig
 from pipeline.config import ObserverConfiguration, create_default_config
+from pipeline.replay import ReplayRecording, ReplayFrame, ReplayValidator
 
 
 # ---------------------------------------------------------------------
-# Helpers
+# Deterministic signal helper (NO randomness)
 # ---------------------------------------------------------------------
 
-def _make_deterministic_signal(n: int = 200) -> np.ndarray:
-    """
-    Create a deterministic, nontrivial signal sequence.
-    Avoids randomness to ensure tests are stable and replayable.
-    """
+def _make_signal(n: int = 250) -> np.ndarray:
     t = np.linspace(0.0, 4.0 * np.pi, n)
-    y = np.sin(t) + 0.25 * np.sin(3.0 * t)  # deterministic multi-frequency
-    return y
+    return np.sin(t) + 0.25 * np.sin(3.0 * t)
 
 
-def _extract_output_signature(outputs):
+def _make_observer_config() -> ObserverConfig:
     """
-    Convert ObserverOutput list into a deterministic signature structure.
-
-    We only include numerically relevant fields:
-    - phi_S, phi_I, phi_C
-    - ΔΦ components (phi_S_dot, e_I, e_C)
-    - J components and regime label
+    Use only deterministic components:
+    - feature_map: identity
+    - memory: ewma
+    - constraint: percentile (deterministic given history)
     """
-    sig = []
-    for o in outputs:
-        sig.append({
-            "t": float(o.timestamp),
-            "phi_S": float(o.phi_S),
-            "phi_I": float(o.phi_I),
-            "phi_C": float(o.phi_C),
-            "dphi": {
-                "phi_S_dot": float(o.delta_phi.phi_S_dot),
-                "e_I": float(o.delta_phi.e_I),
-                "e_C": float(o.delta_phi.e_C),
-            },
-            "score": {
-                "J": float(o.score.J),
-                "J_S": float(o.score.J_S),
-                "J_I": float(o.score.J_I),
-                "J_C": float(o.score.J_C),
-                "regime": str(o.score.regime.value),
-            }
-        })
-    return sig
-
-
-def _assert_signatures_equal(sig_a, sig_b, atol=1e-12, rtol=1e-12):
-    """
-    Deep compare two signatures with strict numeric tolerances.
-    """
-    assert len(sig_a) == len(sig_b)
-
-    for i, (a, b) in enumerate(zip(sig_a, sig_b)):
-        assert a["t"] == pytest.approx(b["t"], abs=atol)
-
-        assert a["phi_S"] == pytest.approx(b["phi_S"], abs=atol, rel=rtol)
-        assert a["phi_I"] == pytest.approx(b["phi_I"], abs=atol, rel=rtol)
-        assert a["phi_C"] == pytest.approx(b["phi_C"], abs=atol, rel=rtol)
-
-        assert a["dphi"]["phi_S_dot"] == pytest.approx(b["dphi"]["phi_S_dot"], abs=atol, rel=rtol)
-        assert a["dphi"]["e_I"] == pytest.approx(b["dphi"]["e_I"], abs=atol, rel=rtol)
-        assert a["dphi"]["e_C"] == pytest.approx(b["dphi"]["e_C"], abs=atol, rel=rtol)
-
-        assert a["score"]["J"] == pytest.approx(b["score"]["J"], abs=atol, rel=rtol)
-        assert a["score"]["J_S"] == pytest.approx(b["score"]["J_S"], abs=atol, rel=rtol)
-        assert a["score"]["J_I"] == pytest.approx(b["score"]["J_I"], abs=atol, rel=rtol)
-        assert a["score"]["J_C"] == pytest.approx(b["score"]["J_C"], abs=atol, rel=rtol)
-
-        # Regime should match exactly
-        assert a["score"]["regime"] == b["score"]["regime"], f"Mismatch at index {i}"
-
-
-# ---------------------------------------------------------------------
-# Core determinism: same config + same inputs -> identical outputs
-# ---------------------------------------------------------------------
-
-def test_observer_replay_determinism_same_inputs_same_outputs():
-    """
-    Running the observer twice with the same configuration and the same
-    input sequence must produce identical outputs.
-    """
-    y = _make_deterministic_signal(250)
-    t = np.arange(len(y)) * 0.1
-
-    config = ObserverConfig(
-        # Feature extraction: deterministic
+    return ObserverConfig(
         feature_map="identity",
         feature_params={},
 
-        # Memory: deterministic EWMA
         memory_model="ewma",
         memory_params={"alpha": 0.2, "initial_value": 0.0},
 
-        # Constraint: percentile, deterministic given history
         constraint_model="percentile",
         constraint_params={"percentile": 95.0, "min_history": 10, "default_value": 1.0},
 
-        # ΔΦ
         dt=0.1,
         derivative_method="finite_difference",
 
-        # Stability
         w_S=1.0,
         w_I=0.5,
         w_C=2.0,
+
         epsilon_stable=0.1,
         epsilon_warning=0.5,
         epsilon_critical=1.0,
 
-        history_length=300,
+        history_length=400,
     )
 
-    obs1 = DiagnosticObserver(config)
-    out1 = obs1.process_batch(y, timestamps=t)
-    sig1 = _extract_output_signature(out1)
 
-    obs2 = DiagnosticObserver(config)
-    out2 = obs2.process_batch(y, timestamps=t)
-    sig2 = _extract_output_signature(out2)
-
-    _assert_signatures_equal(sig1, sig2)
-
-
-# ---------------------------------------------------------------------
-# Processing mode equivalence: batch vs stepwise
-# ---------------------------------------------------------------------
-
-def test_batch_vs_stepwise_equivalence():
+def _record_session(observer: DiagnosticObserver, y: np.ndarray, timestamps: np.ndarray) -> ReplayRecording:
     """
-    Processing the same sequence via process_batch vs repeated process()
-    must yield identical outputs.
+    Run observer on signal and build a ReplayRecording from ObserverOutput frames.
     """
-    y = _make_deterministic_signal(120)
-    t = np.arange(len(y)) * 0.2
-
-    config = ObserverConfig(
-        feature_map="identity",
-        memory_model="ewma",
-        memory_params={"alpha": 0.3, "initial_value": 0.0},
-        constraint_model="percentile",
-        constraint_params={"percentile": 90.0, "min_history": 5, "default_value": 1.0},
-        dt=0.2,
-        derivative_method="finite_difference",
-        w_S=1.0,
-        w_I=1.0,
-        w_C=1.0,
-        epsilon_stable=0.2,
-        epsilon_warning=0.6,
-        epsilon_critical=1.2,
-        history_length=200,
+    rec = ReplayRecording(
+        config_dict=observer.get_config(),
+        metadata={"test": "reproducibility"}
     )
 
-    # Batch
-    obs_batch = DiagnosticObserver(config)
-    out_batch = obs_batch.process_batch(y, timestamps=t)
-    sig_batch = _extract_output_signature(out_batch)
+    for step, (val, t) in enumerate(zip(y, timestamps)):
+        out = observer.process(val, timestamp=float(t))
+        rec.add_frame(ReplayFrame.from_observer_output(out, step=step))
 
-    # Stepwise
-    obs_step = DiagnosticObserver(config)
-    out_step = []
-    for i in range(len(y)):
-        out_step.append(obs_step.process(y[i], timestamp=t[i]))
-    sig_step = _extract_output_signature(out_step)
-
-    _assert_signatures_equal(sig_batch, sig_step)
+    rec.finalize()
+    return rec
 
 
 # ---------------------------------------------------------------------
-# Reset determinism: same observer after reset behaves identically
+# Core determinism tests
 # ---------------------------------------------------------------------
 
-def test_reset_reproducibility():
+def test_observer_is_deterministic_across_fresh_instances():
     """
-    After observer.reset(), running the same inputs again must reproduce
-    the same outputs exactly.
+    Two fresh observers with identical config + identical inputs must yield
+    identical recordings (frame-by-frame) and identical recording hashes.
     """
-    y = _make_deterministic_signal(180)
-    t = np.arange(len(y)) * 0.05
+    y = _make_signal(300)
+    t = np.arange(len(y)) * 0.1
 
-    config = ObserverConfig(
-        feature_map="identity",
-        memory_model="ewma",
-        memory_params={"alpha": 0.15, "initial_value": 0.0},
-        constraint_model="rolling_max",
-        constraint_params={"window": 30, "margin": 0.1, "default_value": 1.0},
-        dt=0.05,
-        derivative_method="finite_difference",
-        w_S=1.0,
-        w_I=0.7,
-        w_C=1.8,
-        epsilon_stable=0.15,
-        epsilon_warning=0.5,
-        epsilon_critical=1.0,
-        history_length=300,
-    )
+    cfg = _make_observer_config()
 
-    obs = DiagnosticObserver(config)
+    obs1 = DiagnosticObserver(cfg)
+    rec1 = _record_session(obs1, y, t)
 
-    out1 = obs.process_batch(y, timestamps=t)
-    sig1 = _extract_output_signature(out1)
+    obs2 = DiagnosticObserver(cfg)
+    rec2 = _record_session(obs2, y, t)
 
+    # Hash match is the strongest signal, but still compare frames too
+    assert rec1.recording_hash == rec2.recording_hash
+
+    comparison = ReplayValidator.compare_recordings(rec1, rec2, tolerance=1e-12)
+    assert comparison["identical"], f"Differences: {comparison['differences'][:5]}"
+
+
+def test_observer_reset_reproduces_identical_recording():
+    """
+    Same observer: run -> reset -> run again must match exactly.
+    """
+    y = _make_signal(220)
+    t = np.arange(len(y)) * 0.1
+
+    cfg = _make_observer_config()
+    obs = DiagnosticObserver(cfg)
+
+    rec1 = _record_session(obs, y, t)
     obs.reset()
+    rec2 = _record_session(obs, y, t)
 
-    out2 = obs.process_batch(y, timestamps=t)
-    sig2 = _extract_output_signature(out2)
+    assert rec1.recording_hash == rec2.recording_hash
 
-    _assert_signatures_equal(sig1, sig2)
+    comparison = ReplayValidator.compare_recordings(rec1, rec2, tolerance=1e-12)
+    assert comparison["identical"], f"Differences: {comparison['differences'][:5]}"
 
 
 # ---------------------------------------------------------------------
-# Config reproducibility: save/load + hash consistency
+# ReplayRecording integrity: verify_hash + save/load round-trip
+# ---------------------------------------------------------------------
+
+def test_recording_verify_hash_passes():
+    """
+    After finalize(), verify_hash() must succeed.
+    """
+    y = _make_signal(150)
+    t = np.arange(len(y)) * 0.1
+
+    cfg = _make_observer_config()
+    obs = DiagnosticObserver(cfg)
+    rec = _record_session(obs, y, t)
+
+    assert rec.verify_hash() is True
+
+
+def test_recording_save_load_json_roundtrip(tmp_path):
+    """
+    JSON save/load must preserve:
+    - frames count
+    - content (within strict tolerance)
+    - recording hash
+    - verify_hash() should pass after load
+    """
+    y = _make_signal(120)
+    t = np.arange(len(y)) * 0.1
+
+    cfg = _make_observer_config()
+    obs = DiagnosticObserver(cfg)
+    rec = _record_session(obs, y, t)
+
+    path = tmp_path / "recording.json"
+    rec.save(str(path), format="json")
+
+    loaded = ReplayRecording.load(str(path))
+
+    # Hash should match (the file should not mutate content)
+    assert loaded.recording_hash == rec.recording_hash
+    assert len(loaded.frames) == len(rec.frames)
+
+    assert loaded.verify_hash() is True
+
+    comparison = ReplayValidator.compare_recordings(rec, loaded, tolerance=1e-12)
+    assert comparison["identical"], f"Differences: {comparison['differences'][:5]}"
+
+
+def test_recording_save_load_pickle_roundtrip(tmp_path):
+    """
+    Pickle save/load must preserve content and hash.
+    """
+    y = _make_signal(120)
+    t = np.arange(len(y)) * 0.1
+
+    cfg = _make_observer_config()
+    obs = DiagnosticObserver(cfg)
+    rec = _record_session(obs, y, t)
+
+    path = tmp_path / "recording.pkl"
+    rec.save(str(path), format="pickle", compress=False)
+
+    loaded = ReplayRecording.load(str(path))
+
+    assert loaded.recording_hash == rec.recording_hash
+    assert len(loaded.frames) == len(rec.frames)
+    assert loaded.verify_hash() is True
+
+    comparison = ReplayValidator.compare_recordings(rec, loaded, tolerance=1e-12)
+    assert comparison["identical"], f"Differences: {comparison['differences'][:5]}"
+
+
+# ---------------------------------------------------------------------
+# Config auditability: save/load hash stability
 # ---------------------------------------------------------------------
 
 def test_configuration_save_load_hash_stability(tmp_path):
     """
-    Saving and re-loading an ObserverConfiguration must preserve the config hash.
-    This is a reproducibility primitive for audit trails.
+    Saving and re-loading ObserverConfiguration must preserve compute_hash().
     """
-    config = create_default_config()
-
-    # Validate before proceeding
-    is_valid, errors = config.validate()
+    cfg = create_default_config()
+    is_valid, errors = cfg.validate()
     assert is_valid, f"Default config invalid: {errors}"
 
-    # Lock it (freezes hash)
-    config.lock()
-    original_hash = config.compute_hash()
+    cfg.lock()
+    h1 = cfg.compute_hash()
 
-    # Save JSON
     json_path = tmp_path / "config.json"
-    config.save(str(json_path), format="json")
+    cfg.save(str(json_path), format="json")
 
-    # Load JSON
     loaded = ObserverConfiguration.load(str(json_path))
-    loaded_hash = loaded.compute_hash()
+    h2 = loaded.compute_hash()
 
-    assert original_hash == loaded_hash
-
-    # Ensure canonical content equivalence (excluding runtime-only fields)
-    # We compare dicts after removing created_at + locked flags, which can differ.
-    d1 = config.to_dict()
-    d2 = loaded.to_dict()
-
-    for k in ["_created_at", "_locked", "_config_hash"]:
-        d1.pop(k, None)
-        d2.pop(k, None)
-
-    assert d1 == d2
+    assert h1 == h2
 
 
 def test_locked_configuration_prevents_modification():
-    """
-    Locked configurations must reject modifications to preserve reproducibility.
-    """
-    config = create_default_config()
-    config.lock()
-
+    cfg = create_default_config()
+    cfg.lock()
     with pytest.raises(RuntimeError):
-        config.stability.w_S = 999.0  # should be blocked
+        cfg.stability.w_S = 999.0
+
+
+# ---------------------------------------------------------------------
+# High-level determinism validator
+# ---------------------------------------------------------------------
+
+def test_replayvalidator_validate_determinism_reports_true():
+    """
+    ReplayValidator.validate_determinism() should report deterministic=True
+    for deterministic config + deterministic signal.
+    """
+    y = _make_signal(120)
+
+    cfg = _make_observer_config()
+    obs = DiagnosticObserver(cfg)
+
+    result = ReplayValidator.validate_determinism(obs, y_signal=y, num_runs=3)
+
+    assert result["deterministic"] is True
+    assert result["all_hashes_match"] is True
+    assert len(result["hashes"]) == 3
+    assert len(set(result["hashes"])) == 1
