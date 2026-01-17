@@ -407,6 +407,23 @@ All conclusions drawn from the framework remain **contingent on the explicit cho
 
 ---
 
+### Appendix: Conceptual Origin of the Triadic Operator
+
+The triadic phase operator ∆Φ employed in this work originates from earlier theoretical develop-
+ments within the Helix–Light–Vortex (HLV) framework, where triadic decompositions were intro-
+duced to organize coherence, memory, and admissible structure in nonstationary systems.
+In that context, the triadic structure was motivated by geometric and information-theoretic
+considerations related to spiral-time dynamics. The present work does not rely on those assump-
+tions. Instead, it extracts the purely mathematical core of the triadic construction and reformulates
+it in standard control-theoretic terms.
+
+This appendix is included solely to document priority and conceptual lineage. All results,
+definitions, and claims in the main text are fully independent of the HLV framework and remain
+valid even if the HLV interpretation is set aside entirely. The conceptual origin of the triadic
+operator can be traced to earlier work within the Helix–Light–Vortex framework [1].
+
+---
+
 ## References
 
 **[1]** M. Krüger. “A Mathematical Unification of the Helix–Light–Vortex (HLV) Framework: Dis-
