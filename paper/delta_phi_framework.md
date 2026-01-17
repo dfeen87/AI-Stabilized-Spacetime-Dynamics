@@ -111,7 +111,7 @@ Define the **triadic phase operator** as
 
 ---
 
-## Minimal Semantics Table
+## Summary Table
 
 **Table 1:** Minimal semantics of the triadic features and the induced ΔΦ components
 
@@ -374,61 +374,131 @@ Learning-based methods may be incorporated without compromising these properties
 
 ## 5. Reference Implementation and Reproducible Pipeline
 
-To support reproducibility and transparent evaluation, a reference implementation of the diagnostic pipeline is provided as an open, modular repository:
+To support reproducibility, auditability, and independent verification, a reference implementation of the diagnostic pipeline described in Section 2 is provided as an open, modular repository:
 
 ### **[AI-Stabilized-Spacetime-Dynamics](https://github.com/dfeen87/AI-Stabilized-Spacetime-Dynamics)**
 
-The repository implements a **non-interventional realization** of the ΔΦ framework as a diagnostic observer, not as a control or optimization system. Its purpose is to demonstrate how the theoretical pipeline can be instantiated in a fully auditable and deterministic manner.
+The purpose of this implementation is not deployment or optimization, but to demonstrate how the theoretical ΔΦ framework can be instantiated as a fully deterministic, non-interventional diagnostic observer.
 
 ---
 
 ### Scope of the Implementation
 
-The reference implementation includes:
+The repository provides a modular realization of the pipeline
 
-- ✓ A **modular feature-construction layer** for φₛ(t), φᵢ(t), and φ_c(t), allowing multiple concrete realizations to be compared under identical diagnostic logic
-- ✓ An **explicit implementation** of the ΔΦ operator and the induced stability score J(t), exactly as defined in the present framework
-- ✓ **Deterministic execution paths** enabling replay, inspection, and parameter locking for validation studies
-- ✓ **Clear separation** between observation, scoring, and external decision-making, consistent with the non-control stance of the framework
+```
+y(t) → (φₛ, φᵢ, φ_c) → ΔΦ(t) → J(t)
+```
 
-> **No component in the repository issues control actions**, modifies system inputs, or performs closed-loop enforcement. Any learning-based modules, when present, are confined to representation and constraint estimation and do not alter the diagnostic logic.
+with explicit separation between feature construction, diagnostic logic, and external decision-making.
+
+Specifically, the implementation includes:
+
+- ✓ A **feature-construction layer** for φₛ(t), φᵢ(t), and φ_c(t), allowing multiple concrete realizations to be evaluated under identical diagnostic logic
+- ✓ An **explicit implementation** of the ΔΦ operator and the stability score J(t) exactly as defined in Eq. (3) and Eq. (4)
+- ✓ **Deterministic execution paths** enabling replay, parameter locking, and auditability for validation studies
+- ✓ **Unit tests and reproducibility checks** ensuring consistency of the diagnostic output under repeated execution
+
+---
+
+### Non-Interventional Design
+
+No component in the repository:
+
+- ✗ Issues control actions
+- ✗ Modifies system inputs u(t)
+- ✗ Performs closed-loop enforcement
+- ✗ Optimizes objectives or predictions
+
+Any learning-based modules, when present, are strictly confined to representation or constraint estimation and do not alter the diagnostic structure of ΔΦ or the computation of J(t).
 
 ---
 
 ### Purpose and Limitations
 
-The repository is **not intended** as a production system, controller, or predictive engine. Instead, it serves as:
+The repository is **not intended** as a controller, predictive engine, or production system. Instead, it serves as:
 
 1. A reproducible companion to the theoretical framework
 2. A concrete reference for reviewers and readers
 3. A testbed for falsification, comparison, and extension
 
-All conclusions drawn from the framework remain **contingent on the explicit choice** of feature maps, memory filters, and constraint estimators disclosed in a given experiment. The repository makes these choices visible by design, reinforcing the framework's emphasis on transparency and methodological honesty.
+All conclusions drawn from the ΔΦ framework remain **contingent on the explicitly disclosed choices** of feature maps, memory filters, and constraint estimators in a given experiment. The reference implementation enforces this disclosure by design, reinforcing the framework's emphasis on transparency and methodological honesty.
 
 ---
 
-### Appendix: Conceptual Origin of the Triadic Operator
+## Appendix A: Conceptual Origin and Lineage of the Triadic Operator
 
-The triadic phase operator ∆Φ employed in this work originates from earlier theoretical develop-
-ments within the Helix–Light–Vortex (HLV) framework, where triadic decompositions were intro-
-duced to organize coherence, memory, and admissible structure in nonstationary systems.
-In that context, the triadic structure was motivated by geometric and information-theoretic
-considerations related to spiral-time dynamics. The present work does not rely on those assump-
-tions. Instead, it extracts the purely mathematical core of the triadic construction and reformulates
-it in standard control-theoretic terms.
+The triadic phase operator ΔΦ employed in this work has its conceptual origin in earlier theoretical developments within the **Helix–Light–Vortex (HLV) framework**, where triadic decompositions were introduced as an organizing principle for coherence, memory, and admissible structure in nonstationary systems.
 
-This appendix is included solely to document priority and conceptual lineage. All results,
-definitions, and claims in the main text are fully independent of the HLV framework and remain
-valid even if the HLV interpretation is set aside entirely. The conceptual origin of the triadic
-operator can be traced to earlier work within the Helix–Light–Vortex framework [1].
+In the original HLV context, the triadic structure was motivated by geometric and information-theoretic considerations related to spiral-time dynamics. The present work, however, **does not rely on these physical or ontological assumptions**. Instead, it extracts the purely mathematical core of the triadic construction and reformulates it in standard control-theoretic and diagnostic terms.
+
+**This appendix is included solely to document priority and conceptual lineage.** All definitions, results, and claims in the main text are fully independent of the HLV framework and remain valid even if the HLV interpretation is set aside entirely. The triadic operator is treated here as a general diagnostic structure applicable to a broad class of nonstationary, path-dependent systems.
+
+The conceptual origin of the triadic operator can be traced to earlier work within the Helix–Light–Vortex framework [1].
+
+---
+
+## Appendix B: External EEG-Based Demonstration of the ΔΦ Diagnostic Operator
+
+To illustrate the practical applicability of the **ΔΦ diagnostic operator** to real-world neurophysiological data, we reference an independent, publicly available EEG analysis pipeline implemented as a Kaggle notebook and mirrored on GitHub.
+
+### Scope and Purpose
+
+The referenced notebook applies a **triadic deviation framework** to multichannel EEG recordings from epilepsy patients and healthy controls. Its purpose is demonstrative and methodological: to show that the ΔΦ structure can be operationalized on empirical data to detect regime transitions, instability, and collapse-like dynamics.
+
+> **Important**: No claim of theoretical novelty is made within the notebook itself. The present manuscript remains the primary and authoritative source for the formal definition, interpretation, and control-theoretic framing of the ΔΦ operator.
+
+---
+
+### Data and Feature Construction
+
+The EEG analysis uses publicly available datasets (**CHB–MIT Scalp EEG Database** via PhysioNet), processed into windowed features corresponding to three conceptual axes:
+
+- **Structural (S)**: proxy measures related to signal topology, variability, and local organization
+- **Informational (I)**: entropy-based and complexity-related measures capturing historical deviation
+- **Coherence (C)**: synchronization and correlation metrics reflecting admissible collective structure
+
+Deviations from baseline are computed as **ΔS**, **ΔI**, and **ΔC**, which are combined into a scalar instability index:
+
+```
+ΔΦ = α|ΔS| + β|ΔI| + γ|ΔC|,    where α + β + γ = 1
+```
+
+This implementation is consistent with the abstract diagnostic definition used throughout this manuscript, while acknowledging that specific feature choices, normalizations, and weights are implementation-dependent.
+
+---
+
+### Qualitative Results
+
+The notebook demonstrates that:
+
+✓ **EEG data from healthy subjects** cluster in low-ΔΦ (isostatic) regimes
+
+✓ **Epileptic EEG recordings** exhibit elevated ΔΦ values, including transitions into allostatic, high-allostatic, and collapse-like regimes
+
+✓ **Peaks in ΔΦ** align temporally with seizure-related activity
+
+These observations support the interpretation of **ΔΦ as a regime-instability diagnostic** rather than as a predictive or control mechanism.
+
+---
+
+### Reproducibility and Attribution
+
+The implementation, data processing steps, and visualization code are fully documented and publicly accessible at:
+
+### 🔗 **[EEG Analysis Notebook](https://github.com/nwycomp/NeuroDynamics-Collapse-Validation-/blob/main/eeg-part-four.ipynb)**
+
+```
+https://github.com/nwycomp/NeuroDynamics-Collapse-Validation-/blob/main/eeg-part-four.ipynb
+```
+
+The notebook serves as an **external demonstration example** and does **not** define the theoretical framework itself. All formal definitions, scope limitations, and claims remain governed by the present manuscript.
 
 ---
 
 ## References
 
-**[1]** M. Krüger. “A Mathematical Unification of the Helix–Light–Vortex (HLV) Framework: Dis-
-crete Geometry, Spiral Time, Unified Lagrangians, and an Effective Field Theory Approach
-to Geometric Unification,” Zenodo (2026). doi:10.5281/zenodo.18261685.
+**[1]** M. Krüger. "A Mathematical Unification of the Helix–Light–Vortex (HLV) Framework: Discrete Geometry, Spiral Time, Unified Lagrangians, and an Effective Field Theory Approach to Geometric Unification," Zenodo (2026). doi:10.5281/zenodo.18261685.
 
 ---
 
