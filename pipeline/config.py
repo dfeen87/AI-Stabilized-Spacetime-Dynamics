@@ -22,8 +22,34 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 
 
+class LockableConfig:
+    """Mixin that provides lockable attribute mutation."""
+
+    _locked: bool = False
+
+    def __setattr__(self, name, value):
+        if hasattr(self, '_locked') and self._locked and name != '_locked':
+            raise RuntimeError(
+                "Cannot modify locked configuration. "
+                "Call unlock() first to allow modifications."
+            )
+        super().__setattr__(name, value)
+
+    def lock(self):
+        """Lock configuration to prevent modifications."""
+        self._locked = True
+
+    def unlock(self):
+        """Unlock configuration to allow modifications."""
+        self._locked = False
+
+    def is_locked(self) -> bool:
+        """Check if configuration is locked."""
+        return self._locked
+
+
 @dataclass
-class FeatureConfig:
+class FeatureConfig(LockableConfig):
     """Configuration for feature extraction (φ_S)"""
     map_type: str = 'identity'
     params: Dict[str, Any] = None
@@ -37,7 +63,7 @@ class FeatureConfig:
 
 
 @dataclass
-class MemoryConfig:
+class MemoryConfig(LockableConfig):
     """Configuration for memory model (φ_I)"""
     model_type: str = 'ewma'
     params: Dict[str, Any] = None
@@ -51,7 +77,7 @@ class MemoryConfig:
 
 
 @dataclass
-class ConstraintConfig:
+class ConstraintConfig(LockableConfig):
     """Configuration for constraint estimation (φ_C)"""
     model_type: str = 'fixed'
     params: Dict[str, Any] = None
@@ -65,7 +91,7 @@ class ConstraintConfig:
 
 
 @dataclass
-class StabilityConfig:
+class StabilityConfig(LockableConfig):
     """Configuration for stability monitoring"""
     w_S: float = 1.0  # Weight for state variation
     w_I: float = 1.0  # Weight for memory error
@@ -86,7 +112,7 @@ class StabilityConfig:
 
 
 @dataclass
-class PipelineConfig:
+class PipelineConfig(LockableConfig):
     """Configuration for pipeline execution"""
     dt: float = 1.0
     derivative_method: str = 'finite_difference'
@@ -172,11 +198,13 @@ class ObserverConfiguration:
             pipeline=PipelineConfig(**config_dict.get('pipeline', {})),
             metadata=config_dict.get('metadata', {})
         )
-        
-        config._locked = config_dict.get('_locked', False)
+
         config._created_at = config_dict.get('_created_at', datetime.now().isoformat())
         config._config_hash = config_dict.get('_config_hash')
-        
+
+        if config_dict.get('_locked', False):
+            config._set_lock_state(True)
+
         return config
     
     def save(self, filepath: str, format: str = 'json'):
@@ -243,13 +271,13 @@ class ObserverConfiguration:
             print("Configuration is already locked")
             return
         
-        self._locked = True
+        self._set_lock_state(True)
         self._config_hash = self.compute_hash()
         print(f"Configuration locked with hash: {self._config_hash[:16]}...")
     
     def unlock(self):
         """Unlock configuration to allow modifications"""
-        self._locked = False
+        self._set_lock_state(False)
         self._config_hash = None
         print("Configuration unlocked")
     
@@ -330,6 +358,15 @@ class ObserverConfiguration:
                     f"Call unlock() first to allow modifications."
                 )
         super().__setattr__(name, value)
+
+    def _set_lock_state(self, locked: bool) -> None:
+        """Set lock state for configuration and nested sections."""
+        for section in (self.feature, self.memory, self.constraint, self.stability, self.pipeline):
+            if hasattr(section, 'lock') and locked:
+                section.lock()
+            elif hasattr(section, 'unlock') and not locked:
+                section.unlock()
+        object.__setattr__(self, '_locked', locked)
     
     def __repr__(self) -> str:
         status = "LOCKED" if self._locked else "UNLOCKED"
