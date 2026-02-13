@@ -18,7 +18,7 @@ NO CONTROL ACTIONS ARE ISSUED AT ANY STAGE.
 
 import numpy as np
 from typing import Optional, List, Dict, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Import framework components
 import sys
@@ -45,15 +45,15 @@ class ObserverConfig:
     """
     # Feature extraction
     feature_map: str = 'identity'
-    feature_params: Dict = None
+    feature_params: Dict = field(default_factory=dict)
     
     # Memory model
     memory_model: str = 'ewma'
-    memory_params: Dict = None
+    memory_params: Dict = field(default_factory=dict)
     
     # Constraint model
     constraint_model: str = 'fixed'
-    constraint_params: Dict = None
+    constraint_params: Dict = field(default_factory=dict)
     
     # ΔΦ operator
     dt: float = 1.0
@@ -69,14 +69,6 @@ class ObserverConfig:
     
     # History tracking
     history_length: int = 100
-    
-    def __post_init__(self):
-        if self.feature_params is None:
-            self.feature_params = {}
-        if self.memory_params is None:
-            self.memory_params = {}
-        if self.constraint_params is None:
-            self.constraint_params = {}
     
     def to_dict(self) -> Dict:
         """Convert to dictionary for serialization"""

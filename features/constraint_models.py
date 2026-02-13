@@ -279,8 +279,9 @@ class HybridConstraint(ConstraintModel):
             return max(estimates)
         elif self.operation == 'mean':
             return float(np.mean(estimates))
-        
-        return estimates[0]  # Fallback
+        else:
+            # This should never happen due to validation in __init__
+            raise ValueError(f"Invalid operation: {self.operation}")
     
     def get_params(self) -> dict:
         return {

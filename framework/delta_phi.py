@@ -9,7 +9,7 @@ issuing actions or modifying system inputs.
 """
 
 import numpy as np
-from typing import Tuple, Optional
+from typing import Optional
 from dataclasses import dataclass
 
 

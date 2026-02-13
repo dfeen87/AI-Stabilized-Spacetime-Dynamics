@@ -12,7 +12,7 @@ All implementations are deterministic and stateful (explicit memory).
 """
 
 import numpy as np
-from typing import Optional
+from typing import List
 from abc import ABC, abstractmethod
 
 
