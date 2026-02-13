@@ -230,7 +230,7 @@ class CustomFeature(FeatureMap):
         """
         self.func = func
         self.name = name
-        self.params = params or {}
+        self.params = params.copy() if params is not None else {}
     
     def extract(self, signal: np.ndarray) -> float:
         return float(self.func(signal))

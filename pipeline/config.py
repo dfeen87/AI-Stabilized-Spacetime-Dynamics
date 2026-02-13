@@ -18,7 +18,7 @@ import yaml
 import hashlib
 from typing import Dict, Optional, Any
 from pathlib import Path
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime
 
 
@@ -52,11 +52,7 @@ class LockableConfig:
 class FeatureConfig(LockableConfig):
     """Configuration for feature extraction (φ_S)"""
     map_type: str = 'identity'
-    params: Dict[str, Any] = None
-    
-    def __post_init__(self):
-        if self.params is None:
-            self.params = {}
+    params: Dict[str, Any] = field(default_factory=dict)
     
     def to_dict(self) -> Dict:
         return {'map_type': self.map_type, 'params': self.params}
@@ -66,11 +62,7 @@ class FeatureConfig(LockableConfig):
 class MemoryConfig(LockableConfig):
     """Configuration for memory model (φ_I)"""
     model_type: str = 'ewma'
-    params: Dict[str, Any] = None
-    
-    def __post_init__(self):
-        if self.params is None:
-            self.params = {}
+    params: Dict[str, Any] = field(default_factory=dict)
     
     def to_dict(self) -> Dict:
         return {'model_type': self.model_type, 'params': self.params}
@@ -80,11 +72,7 @@ class MemoryConfig(LockableConfig):
 class ConstraintConfig(LockableConfig):
     """Configuration for constraint estimation (φ_C)"""
     model_type: str = 'fixed'
-    params: Dict[str, Any] = None
-    
-    def __post_init__(self):
-        if self.params is None:
-            self.params = {}
+    params: Dict[str, Any] = field(default_factory=dict)
     
     def to_dict(self) -> Dict:
         return {'model_type': self.model_type, 'params': self.params}
@@ -293,11 +281,19 @@ class ObserverConfiguration:
         
         Returns:
             Hexadecimal hash string
+            
+        Raises:
+            TypeError: If configuration contains non-serializable values
         """
-        # Create a canonical representation (sorted keys)
-        config_str = json.dumps(self.to_dict(), sort_keys=True)
-        hash_obj = hashlib.sha256(config_str.encode('utf-8'))
-        return hash_obj.hexdigest()
+        try:
+            # Create a canonical representation (sorted keys)
+            config_str = json.dumps(self.to_dict(), sort_keys=True)
+            hash_obj = hashlib.sha256(config_str.encode('utf-8'))
+            return hash_obj.hexdigest()
+        except TypeError as e:
+            raise TypeError(
+                f"Configuration contains non-serializable values: {e}"
+            ) from e
     
     def validate(self) -> tuple[bool, list[str]]:
         """

@@ -12,7 +12,7 @@ The stability score J(t) = ‖ΔΦ(t)‖²_W provides an interpretable measure o
 
 import numpy as np
 from typing import List, Optional, Tuple, Dict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 
 from .delta_phi import DeltaPhiVector
