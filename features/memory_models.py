@@ -13,6 +13,7 @@ All implementations are deterministic and stateful (explicit memory).
 
 import numpy as np
 from abc import ABC, abstractmethod
+from collections import deque
 
 
 class MemoryModel(ABC):
@@ -214,15 +215,11 @@ class WindowedAverageMemory(MemoryModel):
             raise ValueError("window must be >= 1")
         
         self.window = window
-        self.buffer = []
+        self.buffer = deque(maxlen=window)
     
     def update(self, phi_S: float, dt: float = 1.0) -> float:
         """Update windowed average"""
         self.buffer.append(phi_S)
-        
-        # Maintain window size
-        if len(self.buffer) > self.window:
-            self.buffer.pop(0)
         
         return float(np.mean(self.buffer))
     
@@ -235,7 +232,7 @@ class WindowedAverageMemory(MemoryModel):
     
     def get_state(self) -> dict:
         return {
-            'buffer': self.buffer.copy(),
+            'buffer': list(self.buffer),
             'current_phi_I': np.mean(self.buffer) if self.buffer else 0.0
         }
 
@@ -266,15 +263,13 @@ class AdaptiveEWMAMemory(MemoryModel):
         self.initial_value = initial_value
         
         self.phi_I = initial_value
-        self.history = []
+        self.history = deque(maxlen=volatility_window)
         self.current_alpha = alpha_min
     
     def update(self, phi_S: float, dt: float = 1.0) -> float:
         """Update adaptive EWMA"""
         # Update history for volatility estimation
         self.history.append(phi_S)
-        if len(self.history) > self.volatility_window:
-            self.history.pop(0)
         
         # Estimate volatility
         if len(self.history) > 1:
