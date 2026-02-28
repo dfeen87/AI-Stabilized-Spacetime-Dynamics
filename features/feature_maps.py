@@ -11,6 +11,7 @@ Feature maps extract structural characteristics from signals y(t), such as:
 - Curvature proxies
 """
 
+import collections
 import numpy as np
 from typing import Optional, Callable
 from abc import ABC, abstractmethod
@@ -158,20 +159,24 @@ class MovingAverageFeature(FeatureMap):
             window: Window size for moving average
         """
         self.window = window
-        self.buffer = []
+        self.buffer = collections.deque(maxlen=window)
+        self.running_sum = 0.0
     
     def extract(self, signal: np.ndarray) -> float:
         value = float(signal) if np.isscalar(signal) else float(signal[0])
         
+        if len(self.buffer) == self.window:
+            self.running_sum -= self.buffer[0]
+
         self.buffer.append(value)
-        if len(self.buffer) > self.window:
-            self.buffer.pop(0)
+        self.running_sum += value
         
-        return float(np.mean(self.buffer))
+        return float(self.running_sum / len(self.buffer))
     
     def reset(self):
         """Clear buffer"""
         self.buffer.clear()
+        self.running_sum = 0.0
     
     def get_params(self) -> dict:
         return {'window': self.window}
@@ -190,14 +195,12 @@ class VarianceFeature(FeatureMap):
             window: Window size for variance computation
         """
         self.window = window
-        self.buffer = []
+        self.buffer = collections.deque(maxlen=window)
     
     def extract(self, signal: np.ndarray) -> float:
         value = float(signal) if np.isscalar(signal) else float(signal[0])
         
         self.buffer.append(value)
-        if len(self.buffer) > self.window:
-            self.buffer.pop(0)
         
         if len(self.buffer) < 2:
             return 0.0
