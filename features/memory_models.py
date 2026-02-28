@@ -14,6 +14,7 @@ All implementations are deterministic and stateful (explicit memory).
 import numpy as np
 from collections import deque
 from abc import ABC, abstractmethod
+from collections import deque
 
 
 class MemoryModel(ABC):
