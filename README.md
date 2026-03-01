@@ -150,6 +150,13 @@ The only testable content is the **implemented pipeline** and its **explicitly s
 
 ---
 
+## Acknowledgments
+
+This project was developed with a combination of original ideas and math, hands‑on coding, and support from advanced AI systems. I would like to acknowledge **Microsoft Copilot**, and **Anthropic Claude**, for their meaningful assistance in refining concepts, improving clarity, and strengthening the overall quality of this work.
+
+
+---
+
 ## Quick Reference
 
 | Symbol | Meaning |
