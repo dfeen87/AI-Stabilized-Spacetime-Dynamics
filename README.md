@@ -146,7 +146,7 @@ The only testable content is the **implemented pipeline** and its **explicitly s
 
 ## License
 
-**MIT**
+MIT License - see [`LICENSE`](LICENSE) file.
 
 ---
 
